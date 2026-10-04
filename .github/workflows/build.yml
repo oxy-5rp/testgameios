@@ -1,0 +1,27 @@
+name: Build IPA
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select newest Xcode
+        run: |
+          X=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$X"; xcodebuild -version
+      - run: brew install xcodegen && xcodegen generate
+      - name: Build
+        run: |
+          xcodebuild -project FigureGame.xcodeproj -scheme FigureGame -configuration Release \
+            -sdk iphoneos -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+      - name: Package IPA
+        run: |
+          mkdir Payload && cp -R build/Build/Products/Release-iphoneos/FigureGame.app Payload/
+          zip -qr FigureGame.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FigureGame-ipa
+          path: FigureGame.ipa
